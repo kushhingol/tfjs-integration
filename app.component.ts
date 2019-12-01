@@ -2,7 +2,7 @@ import { Component, ViewChild, ElementRef } from '@angular/core';
 import * as tf from '@tensorflow/tfjs';
 
 export interface DetectedObject {
-  bbox: [number, number, number, number];  // [x, y, width, height]
+  bbox: [number, number, number, number];
   class: string;
   score: number;
 }
@@ -65,14 +65,14 @@ export class AppComponent {
     batched.dispose();
     tf.dispose(result);
 
-    const [maxScores, classes] = this.calculateMaxScores(scores, result[0].shape[1], result[0].shape[2]);
-    const indexTensor = tf.tidy(() => {
+    const [maxScores, classes] = this.calculateMaxiumScore(scores, result[0].shape[1], result[0].shape[2]);
+    const tensorIndex = tf.tidy(() => {
       const boxes2 = tf.tensor2d(boxes, [result[1].shape[1], result[1].shape[3]]);
       return tf.image.nonMaxSuppression(boxes2, maxScores, maxNumBoxes, 0.5, 0.5);
     });
-    const indexes = indexTensor.dataSync() as Float32Array;
-    indexTensor.dispose();
-    const output = this.buildDetectedObjects(width, height, boxes, maxScores, indexes, classes);
+    const index = tensorIndex.dataSync() as Float32Array;
+    tensorIndex.dispose();
+    const output = this.generateOutputObject(width, height, boxes, maxScores, index, classes);
     if (output.length > 0) {
       this.renderPredictions(output);
     } else {
@@ -85,15 +85,14 @@ export class AppComponent {
   }
 
 
-  buildDetectedObjects(width: number, height: number, boxes: Float32Array, scores: number[],
-    indexes: Float32Array, classes: number[]): DetectedObject[] {
+  generateOutputObject(width: number, height: number, boxes: Float32Array, scores: number[], index: Float32Array, classes: number[]): DetectedObject[] {
 
-    const count = indexes.length;
+    const count = index.length;
     const objects: DetectedObject[] = [];
     for (let i = 0; i < count; i++) {
       const bbox = [];
       for (let j = 0; j < 4; j++) {
-        bbox[j] = boxes[indexes[i] * 4 + j];
+        bbox[j] = boxes[index[i] * 4 + j];
       }
       const minY = bbox[0] * height;
       const minX = bbox[1] * width;
@@ -105,16 +104,15 @@ export class AppComponent {
       bbox[3] = maxY - minY;
       objects.push({
         bbox: bbox as [number, number, number, number],
-        class: (classes[indexes[i]] + 1).toString(),
-        score: scores[indexes[i]]
+        class: (classes[index[i]] + 1).toString(),
+        score: scores[index[i]]
       });
     }
     return objects;
   }
 
   // function is defined to find the optimum max score.
-  calculateMaxScores(scores: Float32Array, numBoxes: number,
-    numClasses: number): [number[], number[]] {
+  calculateMaxiumScore(scores: Float32Array, numBoxes: number, numClasses: number) {
 
     const maxes = [];
     const classes = [];
@@ -141,9 +139,6 @@ export class AppComponent {
     canvas.height = 450;
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-    // Font options.
-    const font = "16px sans-serif";
-    ctx.font = font;
     ctx.textBaseline = "top";
     ctx.drawImage(this.videoCamera.nativeElement, 0, 0, 350, 450);
     const data = canvas.toDataURL('image/png');
@@ -159,10 +154,12 @@ export class AppComponent {
         ctx.fillStyle = "#FF0000";
       }
       ctx.lineWidth = 2;
-      ctx.strokeRect(x, y, width, height);
+      ctx.beginPath();
+      ctx.rect(x, y, width, height);
+      ctx.stroke();
       // Draw the label background.
       const textWidth = ctx.measureText(prediction.class).width;
-      const textHeight = parseInt(font, 10); // base 10
+      const textHeight = parseInt("16px sans-serif", 10); // base 10
       ctx.fillRect(x, y, textWidth + 4, textHeight + 4);
     });
 
