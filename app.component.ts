@@ -73,20 +73,14 @@ export class AppComponent {
     const indexes = indexTensor.dataSync() as Float32Array;
     indexTensor.dispose();
     const output = this.buildDetectedObjects(width, height, boxes, maxScores, indexes, classes);
-    if (output.length >= 1) {
-      output.forEach(element => {
-        element.class = element.class === '1' ? 'Bolt' : 'Nut';
-      });
+    if (output.length > 0) {
       this.renderPredictions(output);
-      requestAnimationFrame(() => {
-        this.predictImages(video, model);
-      });
     } else {
       this.renderCameraVideo();
-      requestAnimationFrame(() => {
-        this.predictImages(video, model);
-      });
     }
+    requestAnimationFrame(() => {
+      this.predictImages(video, model);
+    });
 
   }
 
@@ -160,12 +154,9 @@ export class AppComponent {
       const width = prediction.bbox[2];
       const height = prediction.bbox[3];
       // Draw the bounding box.
-      if (prediction.class === 'Nut') {
+      if (prediction.class) {
         ctx.strokeStyle = "#FF0000";
         ctx.fillStyle = "#FF0000";
-      } else if (prediction.class === 'Bolt') {
-        ctx.strokeStyle = "#00FFFF";
-        ctx.fillStyle = "#00FFFF";
       }
       ctx.lineWidth = 2;
       ctx.strokeRect(x, y, width, height);
@@ -175,13 +166,12 @@ export class AppComponent {
       ctx.fillRect(x, y, textWidth + 4, textHeight + 4);
     });
 
+    // for rendering class name over the rect
     predictions.forEach(prediction => {
       const x = prediction.bbox[0];
       const y = prediction.bbox[1];
-      if (prediction.class === 'Nut') {
+      if (prediction.class) {
         ctx.fillStyle = "#FFFFFF";
-      } else if (prediction.class === 'Bolt') {
-        ctx.fillStyle = "#000000";
       }
       ctx.fillText(prediction.class, x, y);
     });
