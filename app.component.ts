@@ -188,6 +188,7 @@ export class AppComponent {
 
   }
 
+  // render the video if no prediction is found
   renderCameraVideo() {
     const canvas = this.canvas.nativeElement;
     const ctx = canvas.getContext('2d');
